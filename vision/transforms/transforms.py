@@ -323,22 +323,29 @@ class RandomSampleCrop(object):
 
 
 class Expand(object):
-    def __init__(self, mean):
+    def __init__(self, mean, max_size: int = 1000):
         self.mean = mean
+        self.max_size = max_size
 
     def __call__(self, image, boxes, labels):
-        if random.randint(2):
+        if random.randint(8) == 0:
             return image, boxes, labels
 
         height, width, depth = image.shape
+
+        # Don't expand large images
+        if height > self.max_size or width > self.max_size:
+            return image, boxes, labels
+
         ratio = random.uniform(1, 4)
         left = random.uniform(0, width*ratio - width)
         top = random.uniform(0, height*ratio - height)
 
-        expand_image = np.zeros(
-            (int(height*ratio), int(width*ratio), depth),
-            dtype=image.dtype)
-        expand_image[:, :, :] = self.mean
+        # expand_image = np.zeros(
+        #     (int(height*ratio), int(width*ratio), depth),
+        #     dtype=image.dtype)
+        # expand_image[:, :, :] = self.mean
+        expand_image = np.full((int(height*ratio), int(width*ratio), depth), self.mean, dtype=image.dtype)
         expand_image[int(top):int(top + height),
                      int(left):int(left + width)] = image
         image = expand_image
