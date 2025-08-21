@@ -105,8 +105,7 @@ DEVICE = torch.device("cuda:0" if torch.cuda.is_available() and args.use_cuda el
 
 if args.use_cuda and torch.cuda.is_available():
     torch.backends.cudnn.benchmark = True
-    logging.info("Use Cuda.")
-
+    logging.info(f"Useing Cuda device {DEVICE}")
 
 def train(loader, net, criterion, optimizer, device, debug_steps=100, epoch=-1):
     net.train(True)
@@ -119,7 +118,7 @@ def train(loader, net, criterion, optimizer, device, debug_steps=100, epoch=-1):
         boxes = boxes.to(device)
         labels = labels.to(device)
 
-        optimizer.zero_grad()
+        optimizer.zero_grad(set_to_none=True)
         confidence, locations = net(images)
         regression_loss, classification_loss = criterion(confidence, locations, labels, boxes)  # TODO CHANGE BOXES
         loss = regression_loss + classification_loss
@@ -229,7 +228,7 @@ if __name__ == '__main__':
     logging.info("Train dataset size: {}".format(len(train_dataset)))
     train_loader = DataLoader(train_dataset, args.batch_size,
                               num_workers=args.num_workers,
-                              shuffle=True)
+                              shuffle=True, pin_memory=True)
     logging.info("Prepare Validation datasets.")
     if args.dataset_type == "voc":
         val_dataset = VOCDataset(args.validation_dataset, transform=test_transform,
@@ -243,7 +242,7 @@ if __name__ == '__main__':
 
     val_loader = DataLoader(val_dataset, args.batch_size,
                             num_workers=args.num_workers,
-                            shuffle=False)
+                            shuffle=False, pin_memory=True)
     logging.info("Build network.")
     net = create_net(num_classes)
     min_loss = -10000.0
@@ -321,9 +320,9 @@ if __name__ == '__main__':
 
     logging.info(f"Start training from epoch {last_epoch + 1}.")
     for epoch in range(last_epoch + 1, args.num_epochs):
-        scheduler.step()
         train(train_loader, net, criterion, optimizer,
               device=DEVICE, debug_steps=args.debug_steps, epoch=epoch)
+        scheduler.step()
         
         if epoch % args.validation_epochs == 0 or epoch == args.num_epochs - 1:
             val_loss, val_regression_loss, val_classification_loss = test(val_loader, net, criterion, DEVICE)
