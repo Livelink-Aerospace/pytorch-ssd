@@ -283,11 +283,25 @@ if __name__ == '__main__':
                 net.classification_headers.parameters()
             )}
         ]
+    if args.resume:
+        # PRM we need to set the initial learning rate when resuming
+        for param_dict in params:
+            param_dict['initial_lr'] = args.lr
 
     timer.start("Load Model")
     if args.resume:
         logging.info(f"Resume from the model {args.resume}")
         net.load(args.resume)
+        # try to get the right epoch
+        parts = args.resume.split("-")
+        if len(parts) > 2:
+            for index, part in enumerate(parts):
+                if part.lower() == "epoch":
+                    last_epoch = int(parts[index + 1])
+                    logging.info(f"Resume from epoch {last_epoch}")
+                    
+                    
+
     elif args.base_net:
         logging.info(f"Init from base net {args.base_net}")
         net.init_from_base_net(args.base_net)
